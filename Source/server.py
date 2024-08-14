@@ -33,7 +33,7 @@ class Server:
     def accessing(self, conn, addr):
         try:
             while self.controling:
-                userInput = input("Enter command: ").lower()
+                userInput = input("$: ").lower()
                 conn.send(userInput.encode())
                 if userInput == "exit":
                     self.sock.close()
