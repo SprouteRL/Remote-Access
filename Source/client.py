@@ -5,7 +5,7 @@ import platform
 import time
 
 IP = "127.0.0.1"
-PORT = 13064
+PORT = 12364
 RETRY_TIME = 0.1
 
 def connect_to_server():

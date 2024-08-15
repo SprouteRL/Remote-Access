@@ -144,7 +144,6 @@ class Server:
             self.sock.close()
 
         print("\nSocket closed.")
-        exit(0)
 
 IP = "127.0.0.1"
 PORT = 13064
