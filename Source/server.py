@@ -3,6 +3,7 @@ import subprocess
 import platform
 import os
 import select
+import atexit
 import threading
 
 class Server:
@@ -11,6 +12,9 @@ class Server:
         self.PORT = port
         self.controling = False
         self.sock = None
+
+        atexit.register(self.cleanup)
+
         self.bind()
     
     def bind(self):
@@ -146,6 +150,6 @@ class Server:
         print("\nSocket closed.")
 
 IP = "127.0.0.1"
-PORT = 13064
+PORT = 12364
 
 Server(IP, PORT)

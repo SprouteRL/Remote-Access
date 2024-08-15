@@ -76,7 +76,9 @@ class Server(customtkinter.CTk):
             self.entry.delete(0, customtkinter.END)
 
             if cmd == "exit":
-                self.cleanup()
+                self.start_button.configure(text="Start Socket")
+                t = threading.Thread(target=self.cleanup)
+                t.start()
             elif cmd == "screenshot":
                 self.receive_screenshot()
             elif cmd == "getos":
@@ -173,7 +175,7 @@ class Server(customtkinter.CTk):
             self.set_response("Command response timeout.")
 
     def clear_terminal(self):
-        self.set_response("\n" * 100 + "Cleared terminal.\n")
+        self.set_response("")
 
     def show_help(self):
         help_text = (
